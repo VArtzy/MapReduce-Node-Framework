@@ -1,8 +1,8 @@
 type jobStatus = 'idle' | 'mapping' | 'reducing'
 
-export interface KV {
+export interface KV<T = string> {
     key: string,
-    value: string
+    value: T
 }
 
 export enum JobPhase {

@@ -4,6 +4,31 @@ import path from "path";
 import fs from "fs";
 import { JobPhase, KV, Task } from "./type";
 
+/**
+* Worker class for map-reduce job
+* @extends EventEmitter
+* @example
+const worker = new Worker('http://localhost:3000/master')
+
+worker.on('registered', console.log)
+worker.on('registrationError', console.error)
+worker.on('taskFailed', console.error)
+worker.on('writeIntermediateResultError', console.error)
+worker.on('writeFinalResultError', console.error)
+worker.on('shutdown', console.log)
+worker.on('shutdownError', console.error)
+
+worker.start()
+
+const task: Task = {
+    id: 'map-task-1',
+    name: 'wordCount',
+    phase: JobPhase.MAP,
+    file: path.join(__dirname, 'input.txt')
+}
+
+const result = worker.executeTask(task)
+*/
 export class Worker extends EventEmitter {
     private id: string
     private masterAddress: string
@@ -43,7 +68,7 @@ export class Worker extends EventEmitter {
     * Execute worker task either map or reduce tasks
     * @param Task task to do and it's phase (map/reduce)
     */
-    async executeTask(task: Task) {
+    executeTask(task: Task) {
         try {
             switch (task.phase) {
                 case JobPhase.MAP:

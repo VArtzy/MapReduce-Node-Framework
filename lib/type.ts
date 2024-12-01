@@ -1,4 +1,4 @@
-type jobStatus = 'idle' | 'mapping' | 'reducing'
+export type jobStatus = 'idle' | 'mapping' | 'reducing'
 
 export interface KV<T = string> {
     key: string,
@@ -10,10 +10,10 @@ export enum JobPhase {
     REDUCE
 }
 
-export interface Job {
+export interface Job<T = string> {
     name: string,
     files: string[],
-    mapFunction: (file: string, contents: string) => KV[],
+    mapFunction: (file: string, contents: string) => KV<T>[],
     reduceFunction: (key: string, values: string[]) => string,
     reduceNum: number
 }

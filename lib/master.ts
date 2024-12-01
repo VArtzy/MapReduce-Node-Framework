@@ -1,5 +1,6 @@
 import EventEmitter from "events"
-import { Worker, Job, Task, JobPhase } from "./type"
+import { Job, Task, JobPhase } from "./type"
+import Worker from "./slave"
 import { randomUUID } from "crypto"
 
 /**
@@ -23,11 +24,11 @@ master.initJob({
 
 const nextTask = master.assignTask()
 */
-export class Master extends EventEmitter {
+export default class Master<T> extends EventEmitter {
     private workers: Map<string, Worker> = new Map()
     private tasks: Task[] = []
     private completedTasks: Task[] = []
-    private job: Job | null = null
+    private job: Job<T> | null = null
 
     constructor() { super() }
 
@@ -38,11 +39,7 @@ export class Master extends EventEmitter {
     */
     registerWorker(address: string): string {
         const workerId = randomUUID()
-        const worker: Worker = {
-            id: workerId,
-            address,
-            status: 'idle'
-        }
+        const worker = new Worker(address)
         this.workers.set(workerId, worker)
         this.emit('workerRegister', worker)
         return workerId
@@ -52,7 +49,7 @@ export class Master extends EventEmitter {
     * Assign a task to a worker. creating multiple, dynamic runtime job
     * @param Job The job to be executed
     */
-    initJob(job: Job) {
+    initJob(job: Job<T>) {
         if (this.job) {
             throw new Error('Job already exists')
         }
@@ -146,7 +143,7 @@ export class Master extends EventEmitter {
     * Uitlity method for geting current job
     * @returns Current job
     */
-    getCurrentJob(): Job | null {
+    getCurrentJob(): Job<T> | null {
         return this.job
     }
 }

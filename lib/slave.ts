@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
-import { JobPhase, KV, Task } from "./type";
+import { JobPhase, KV, Task, jobStatus } from "./type";
 
 /**
 * Worker class for map-reduce job
@@ -29,16 +29,17 @@ const task: Task = {
 
 const result = worker.executeTask(task)
 */
-export class Worker extends EventEmitter {
-    private id: string
-    private masterAddress: string
+export default class Worker extends EventEmitter {
+    public id: string
+    public status: jobStatus
+    public masterAddress: string
     private workDir: string
 
     constructor(masterAddress: string, workDir?: string) {
         super()
         this.id = randomUUID()
         this.masterAddress = masterAddress
-        this.workDir = workDir || path.join(__dirname, 'work')
+        this.workDir = workDir || path.join(process.cwd(), 'work')
     }
 
     /** Start the worker with creating the work directory */
@@ -92,9 +93,10 @@ export class Worker extends EventEmitter {
     private executeMap(task: Task) {
         if (!task.file) throw new Error('No input file specified for map task')
 
+        this.status = 'mapping'
         fs.readFile(task.file, async (err, file) => {
             if (err) throw err
-            const intermediateResult = this.performMap(task.file, file.toString())
+            const intermediateResult = Worker.performMap(task.file, file.toString())
             await this.writeIntermediateResult(task.name, task.id, intermediateResult)
 
             return { taskId: task.id, intermediateResultCount: intermediateResult.length }
@@ -109,9 +111,10 @@ export class Worker extends EventEmitter {
     private async executeReduce(task: Task) {
         if (!task.reduceKey) throw new Error('No reduce key specified for reduce task')
 
+        this.status = 'reducing'
         const intermediateValues = await this.collectIntermediateValues(task.name, task.reduceKey)
 
-        const result = this.performReduce(task.reduceKey, intermediateValues)
+        const result = Worker.performReduce(task.reduceKey, intermediateValues)
 
         this.writeFinalResult(task.name, task.id, result)
 
@@ -171,22 +174,22 @@ export class Worker extends EventEmitter {
     }
 
     /**
-    * Utility method for map function example (word count)
+    * Utility static method for map function example (word count)
     * @param filename the input file name
     * @param contents the file contents
     * @return KV[] the key-value pairs
     */
-    private performMap(_: string | undefined, contents: string): KV<number>[] {
+    static performMap(_: string | undefined, contents: string): KV<number>[] {
         return contents.toLowerCase().split(/\s+/).map(word => ({ key: word, value: 1 }))
     }
 
     /**
-    * Utility method for reduce function example (word count)
+    * Utility static method for reduce function example (word count)
     * @param key the key to reduce
     * @param values the values to reduce
     * @return string the reduced value
     */
-    private performReduce(_: string, values: string[]): string {
+    static performReduce(_: string, values: string[]): string {
         return values.length.toString()
     }
 
@@ -201,6 +204,7 @@ export class Worker extends EventEmitter {
         fs.writeFile(outputDir, JSON.stringify(result), err => {
             if (err) this.emit('writeFinalResultError', err)
         })
+        this.status = 'idle'
     }
 
     /**
